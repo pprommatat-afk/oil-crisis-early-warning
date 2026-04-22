@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UNICEF Thailand — Early Warning Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Epilogue:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--red:#E8392A;--red-bg:#FFF0EE;--red-mid:#FFDAD6;--yellow:#D97706;--yel-bg:#FFFBEB;--yel-mid:#FDE68A;--green:#1A7A4A;--grn-bg:#F0FBF4;--grn-mid:#BBF7D0;--gray:#6B7280;--gry-bg:#F4F4F5;--ink:#0F1923;--ink2:#374151;--ink3:#6B7280;--paper:#FAFAF9;--rule:#E5E7EB;--accent:#1A3A5C;--mono:'DM Mono',monospace;--sans:'Epilogue',sans-serif}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--paper);color:var(--ink);min-height:100vh}
+.header{background:var(--accent);color:#fff;padding:22px 36px 18px;display:flex;align-items:flex-end;justify-content:space-between;gap:24px;border-bottom:3px solid var(--red)}
+.header h1{font-size:20px;font-weight:900;letter-spacing:-.5px;line-height:1.1}
+.header .sub{font-size:10px;font-weight:400;opacity:.65;margin-top:4px;font-family:var(--mono);letter-spacing:.5px;text-transform:uppercase}
+.header-meta{text-align:right;font-family:var(--mono);font-size:10px;opacity:.6;line-height:1.9}
+.signal-bar{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--rule);background:#fff}
+.sig-block{padding:14px 20px;border-right:1px solid var(--rule);cursor:pointer;transition:background .15s;position:relative}
+.sig-block:last-child{border-right:none}
+.sig-block:hover{background:var(--gry-bg)}
+.sig-block.active::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px}
+.sig-block.active[data-filter="all"]::after{background:var(--accent)}
+.sig-block.active[data-filter="red"]::after{background:var(--red)}
+.sig-block.active[data-filter="yellow"]::after{background:var(--yellow)}
+.sig-block.active[data-filter="green"]::after{background:var(--green)}
+.sig-label{font-size:9px;font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:3px}
+.sig-count{font-size:32px;font-weight:900;line-height:1;letter-spacing:-2px}
+.sig-count.red{color:var(--red)}.sig-count.yellow{color:var(--yellow)}.sig-count.green{color:var(--green)}.sig-count.gray{color:var(--gray)}
+.sig-desc{font-size:10px;color:var(--ink3);margin-top:2px}
+.sig-change{font-size:9px;font-family:var(--mono);margin-top:3px;font-weight:500}
+.sig-change.up{color:var(--red)}.sig-change.same{color:var(--gray)}
+.layout{display:grid;grid-template-columns:200px 1fr 290px;min-height:calc(100vh - 130px)}
+.sidebar{border-right:1px solid var(--rule);background:#fff;overflow-y:auto}
+.sidebar-title{padding:12px 14px 8px;font-size:9px;font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;color:var(--ink3);border-bottom:1px solid var(--rule)}
+.pillar-btn{width:100%;text-align:left;padding:10px 14px;font-family:var(--sans);font-size:12px;font-weight:600;color:var(--ink2);background:none;border:none;border-bottom:1px solid var(--rule);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:6px;transition:background .1s}
+.pillar-btn:hover{background:var(--gry-bg)}
+.pillar-btn.active{background:var(--accent);color:#fff}
+.pillar-dots{display:flex;gap:3px;flex-shrink:0}
+.dot{width:6px;height:6px;border-radius:50%}
+.dot.red{background:var(--red)}.dot.yellow{background:var(--yellow)}.dot.green{background:var(--green)}.dot.gray{background:#D1D5DB}
+.main{padding:20px 24px;overflow-y:auto}
+.main-title{font-size:10px;font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.search-box{background:#fff;border:1px solid var(--rule);border-radius:5px;padding:5px 9px;font-family:var(--mono);font-size:10px;color:var(--ink);width:140px;outline:none}
+.search-box:focus{border-color:var(--accent)}
+.note-banner{background:#EFF6FF;border-left:3px solid #3B82F6;border-radius:0 6px 6px 0;padding:10px 12px;margin-bottom:14px;font-size:11px;line-height:1.6;color:#1E3A5F}
+.note-banner strong{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:4px;color:#1E3A5F}
+.note-sections{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.note-sec{font-size:10px;line-height:1.5}
+.note-sec-title{font-weight:700;font-size:9px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+.note-sec-title.red{color:var(--red)}.note-sec-title.yellow{color:var(--yellow)}.note-sec-title.blue{color:#3B82F6}.note-sec-title.green{color:var(--green)}
+.filter-row{display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap}
+.chip{font-size:9px;font-family:var(--mono);padding:3px 8px;border-radius:20px;border:1px solid var(--rule);background:#fff;cursor:pointer;transition:all .1s;color:var(--ink3)}
+.chip:hover{border-color:var(--ink3)}
+.chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.cards-grid{display:flex;flex-direction:column;gap:7px}
+.card{background:#fff;border:1px solid var(--rule);border-radius:7px;padding:12px 14px;cursor:pointer;transition:box-shadow .15s,border-color .15s;display:grid;grid-template-columns:7px 1fr auto;gap:10px;align-items:center;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+.card:hover{box-shadow:0 2px 10px rgba(0,0,0,.07);border-color:#D1D5DB}
+.card.selected{border-color:var(--accent);box-shadow:0 0 0 2px rgba(26,58,92,.12)}
+.card.new-data{border-color:#3B82F6;background:#FAFEFF}
+.card-stripe{width:7px;border-radius:3px;align-self:stretch;min-height:36px}
+.card-stripe.red{background:var(--red)}.card-stripe.yellow{background:var(--yellow)}.card-stripe.green{background:var(--green)}.card-stripe.gray{background:#D1D5DB}
+.card-name{font-size:12px;font-weight:700;color:var(--ink);margin-bottom:1px}
+.card-meta{font-size:9px;font-family:var(--mono);color:var(--ink3)}
+.card-right{text-align:right;flex-shrink:0}
+.card-signal{font-size:9px;font-weight:600;font-family:var(--mono);padding:2px 7px;border-radius:3px;display:inline-block;margin-bottom:3px}
+.card-signal.red{background:var(--red-mid);color:#7F1D1D}.card-signal.yellow{background:var(--yel-mid);color:#78350F}.card-signal.green{background:var(--grn-mid);color:#14532D}.card-signal.gray{background:#E5E7EB;color:var(--gray)}
+.card-trend{font-size:12px;font-family:var(--mono)}
+.trend-up{color:var(--red)}.trend-down{color:var(--green)}.trend-stable{color:var(--gray)}
+.new-tag{font-size:8px;font-family:var(--mono);background:#DBEAFE;color:#1D4ED8;padding:1px 5px;border-radius:3px;margin-left:4px;vertical-align:middle}
+.detail{border-left:1px solid var(--rule);background:#fff;overflow-y:auto}
+.detail-header{padding:16px 18px 12px;border-bottom:1px solid var(--rule);position:sticky;top:0;background:#fff;z-index:10}
+.detail-pillar{font-size:9px;font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:3px}
+.detail-name{font-size:15px;font-weight:700;line-height:1.2;margin-bottom:8px}
+.detail-signal-row{display:flex;align-items:center;gap:8px}
+.big-signal{font-size:12px;font-weight:700;font-family:var(--mono);padding:4px 10px;border-radius:4px}
+.big-signal.red{background:var(--red-bg);color:var(--red);border:1px solid var(--red-mid)}
+.big-signal.yellow{background:var(--yel-bg);color:var(--yellow);border:1px solid var(--yel-mid)}
+.big-signal.green{background:var(--grn-bg);color:var(--green);border:1px solid var(--grn-mid)}
+.big-signal.gray{background:var(--gry-bg);color:var(--gray);border:1px solid var(--rule)}
+.big-trend{font-size:16px}
+.detail-interp{font-size:10px;color:var(--ink3);font-family:var(--mono)}
+.detail-body{padding:14px 18px}
+.stat-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.stat-box{background:var(--gry-bg);border-radius:5px;padding:9px 10px}
+.stat-label{font-size:8px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.7px;color:var(--ink3);margin-bottom:2px}
+.stat-value{font-size:17px;font-weight:700;font-family:var(--mono);letter-spacing:-.5px}
+.stat-value.red{color:var(--red)}.stat-value.yellow{color:var(--yellow)}.stat-value.green{color:var(--green)}
+.stat-sub{font-size:8px;font-family:var(--mono);color:var(--ink3);margin-top:1px}
+.chart-section{margin-bottom:14px}
+.chart-label{font-size:9px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.7px;color:var(--ink3);margin-bottom:6px}
+.chart-wrap{background:var(--gry-bg);border-radius:5px;padding:10px;overflow:hidden}
+.threshold-section{margin-bottom:14px}
+.thresh-bar-wrap{background:var(--gry-bg);border-radius:5px;padding:10px}
+.thresh-bar{height:7px;border-radius:3px;position:relative;overflow:visible;margin:14px 0 6px;display:flex}
+.thresh-seg{height:100%}
+.thresh-seg.green{background:var(--grn-mid);border-radius:3px 0 0 3px}
+.thresh-seg.yellow{background:var(--yel-mid)}
+.thresh-seg.red{background:var(--red-mid);border-radius:0 3px 3px 0}
+.thresh-marker{position:absolute;top:-4px;width:3px;height:15px;background:var(--ink);border-radius:2px;transform:translateX(-50%);transition:left .4s ease}
+.thresh-labels{display:flex;justify-content:space-between;font-size:8px;font-family:var(--mono);color:var(--ink3)}
+.section-title{font-size:9px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.7px;color:var(--ink3);margin-bottom:6px;padding-bottom:3px;border-bottom:1px solid var(--rule)}
+.source-row{font-size:10px;color:var(--ink3);line-height:1.6;margin-bottom:12px}
+.source-row strong{color:var(--ink2);font-weight:600}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:40px 20px;text-align:center;color:var(--ink3)}
+.empty-icon{font-size:28px;margin-bottom:10px;opacity:.4}
+.empty-text{font-size:11px;font-family:var(--mono)}
+.note-box{background:#EFF6FF;border-left:2px solid #3B82F6;border-radius:0 5px 5px 0;padding:8px 10px;margin-bottom:12px;font-size:10px;line-height:1.6;color:#1E3A5F}
+.note-box strong{font-weight:700;display:block;margin-bottom:2px;font-size:9px;text-transform:uppercase;letter-spacing:.5px}
+.week-change-box{background:#FFFBEB;border-left:2px solid var(--yellow);border-radius:0 5px 5px 0;padding:8px 10px;margin-bottom:12px;font-size:10px;line-height:1.6;color:#78350F}
+.week-change-box strong{font-weight:700;display:block;margin-bottom:2px;font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#92400E}
+.missing-card{background:var(--gry-bg);border:1px dashed #D1D5DB;border-radius:7px;padding:10px 14px;display:flex;align-items:center;gap:10px;opacity:.55}
+.missing-card .card-name{color:var(--ink3)}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div>
+    <h1>UNICEF Thailand<br>Early Warning Dashboard</h1>
+    <div class="sub">Oil price shock transmission monitoring · Week of April 20, 2026</div>
+  </div>
+  <div class="header-meta">
+    Last updated: April 20, 2026<br>
+    Baseline: February 2026<br>
+    16 active · 7 awaiting data
+  </div>
+</header>
+
+<div class="signal-bar">
+  <div class="sig-block active" data-filter="all" onclick="filterSignal('all',this)">
+    <div class="sig-label">All signals</div>
+    <div class="sig-count" style="color:var(--accent)">16</div>
+    <div class="sig-desc">indicators with data</div>
+  </div>
+  <div class="sig-block" data-filter="red" onclick="filterSignal('red',this)">
+    <div class="sig-label">Critical</div>
+    <div class="sig-count red">4</div>
+    <div class="sig-desc">🔴 Red</div>
+    <div class="sig-change up">▲ +1 from last week</div>
+  </div>
+  <div class="sig-block" data-filter="yellow" onclick="filterSignal('yellow',this)">
+    <div class="sig-label">Early warning</div>
+    <div class="sig-count yellow">2</div>
+    <div class="sig-desc">🟡 Yellow</div>
+    <div class="sig-change same">— unchanged</div>
+  </div>
+  <div class="sig-block" data-filter="green" onclick="filterSignal('green',this)">
+    <div class="sig-label">Stable</div>
+    <div class="sig-count green">11</div>
+    <div class="sig-desc">🟢 Green</div>
+    <div class="sig-change same">— unchanged</div>
+  </div>
+</div>
+
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-title">Pillars</div>
+    <button class="pillar-btn active" data-pillar="all" onclick="filterPillar('all',this)">All pillars<span class="pillar-dots"><span class="dot red"></span><span class="dot red"></span><span class="dot red"></span><span class="dot red"></span><span class="dot yellow"></span><span class="dot yellow"></span></span></button>
+    <button class="pillar-btn" data-pillar="Cost of Living" onclick="filterPillar('Cost of Living',this)">Cost of Living<span class="pillar-dots"><span class="dot green"></span><span class="dot green"></span><span class="dot green"></span><span class="dot green"></span><span class="dot green"></span><span class="dot green"></span></span></button>
+    <button class="pillar-btn" data-pillar="Energy" onclick="filterPillar('Energy',this)">Energy<span class="pillar-dots"><span class="dot red"></span><span class="dot green"></span></span></button>
+    <button class="pillar-btn" data-pillar="Inflation" onclick="filterPillar('Inflation',this)">Inflation<span class="pillar-dots"><span class="dot green"></span><span class="dot green"></span></span></button>
+    <button class="pillar-btn" data-pillar="Household Stress" onclick="filterPillar('Household Stress',this)">Household Stress<span class="pillar-dots"><span class="dot red"></span><span class="dot red"></span><span class="dot yellow"></span><span class="dot yellow"></span></span></button>
+    <button class="pillar-btn" data-pillar="Labour Market" onclick="filterPillar('Labour Market',this)">Labour Market<span class="pillar-dots"><span class="dot green"></span><span class="dot gray"></span></span></button>
+    <button class="pillar-btn" data-pillar="Child Specific Impact" onclick="filterPillar('Child Specific Impact',this)">Child Impact<span class="pillar-dots"><span class="dot gray"></span><span class="dot gray"></span></span></button>
+    <button class="pillar-btn" data-pillar="Additional Indicators" onclick="filterPillar('Additional Indicators',this)">Additional<span class="pillar-dots"><span class="dot red"></span><span class="dot gray"></span><span class="dot gray"></span><span class="dot gray"></span></span></button>
+  </nav>
+
+  <main class="main">
+    <div class="main-title">
+      <span id="main-label">All indicators</span>
+      <input class="search-box" type="text" placeholder="Search…" oninput="searchCards(this.value)">
+    </div>
+
+    <div class="note-banner">
+      <strong>Analytical note — April 20, 2026</strong>
+      The immediate fuel price shock has paused but household stress has not. Diesel stabilised this week (48.40 → 42.90 THB, still 43% above baseline). New Oil Fund data reveal a −60.2 bn THB deficit — the fiscal cost of sustained energy subsidies. Weak consumption, low confidence, and high debt persist.
+      <div class="note-sections">
+        <div class="note-sec"><div class="note-sec-title red">Still critical (4 Red)</div>Diesel Red; private consumption −2.9% YoY; household debt 86.3%; Oil Fund −60.2 bn THB</div>
+        <div class="note-sec"><div class="note-sec-title yellow">Early warning (2 Yellow)</div>Consumer confidence 51.8 ↓ (near Red threshold of 50); public debt 66.1% ↑, fiscal space narrowing</div>
+        <div class="note-sec"><div class="note-sec-title blue">Changed this week</div>Diesel ↓ stabilised · Oil Fund data added (new 🔴) · CPI food indices updated to March 2026</div>
+        <div class="note-sec"><div class="note-sec-title green">Stable for now</div>Food and core inflation Green · LPG stable · Labour market broadly stable · Songkran may temporarily support mobility</div>
+      </div>
+    </div>
+
+    <div class="filter-row">
+      <span class="chip active" onclick="setTrendFilter('all',this)">All trends</span>
+      <span class="chip" onclick="setTrendFilter('↑',this)">↑ Rising</span>
+      <span class="chip" onclick="setTrendFilter('↓',this)">↓ Falling</span>
+      <span class="chip" onclick="setTrendFilter('→',this)">→ Stable</span>
+      <span class="chip" onclick="setTrendFilter('new',this)">🔵 Updated this week</span>
+    </div>
+
+    <div class="cards-grid" id="cards-grid"></div>
+  </main>
+
+  <aside class="detail" id="detail-panel">
+    <div class="empty-state">
+      <div class="empty-icon">◎</div>
+      <div class="empty-text">Select an indicator<br>to view details</div>
+    </div>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+const INDICATORS=[
+  {pillar:'Cost of Living',name:'CPI Food',code:'CPI_FOOD',date:'Mar 2026',raw:101.61,transform:'YoY',value:0.336,signal:'green',trend:'→',interp:'No immediate concern',baseline:101.34,change:0.27,source:'Ministry of Commerce / NSO',status:'Ready',updated:false,thresholds:{g1:0,g2:1.8,y1:1.8,y2:2.5,r1:2.5,r2:6},unit:'%',history:[{d:'Feb 25',v:101.08},{d:'Mar 25',v:101.27},{d:'Jan 26',v:102.09},{d:'Feb 26',v:101.34},{d:'Mar 26',v:101.61}],note:'Food prices stable. No broad inflationary pass-through yet visible.'},
+  {pillar:'Cost of Living',name:'CPI Food Low Income',code:'CPI_FOOD_LOW_INCOME',date:'Mar 2026',raw:100.65,transform:'YoY',value:-0.749,signal:'green',trend:'↑',interp:'Emerging risk',baseline:100.19,change:0.46,source:'Ministry of Commerce / NSO',status:'Ready',updated:true,thresholds:{g1:-3,g2:2.2,y1:2.2,y2:3.3,r1:3.3,r2:7},unit:'%',history:[{d:'Jan 25',v:101.33},{d:'Feb 25',v:101.22},{d:'Dec 25',v:102.30},{d:'Jan 26',v:101.53},{d:'Feb 26',v:100.19},{d:'Mar 26',v:100.65}],note:'Updated to March 2026. YoY still negative (deflation in this basket) but trend turning ↑.'},
+  {pillar:'Cost of Living',name:'CPI Food Rural',code:'CPI_FOOD_RURAL',date:'Mar 2026',raw:100.93,transform:'YoY',value:-0.532,signal:'green',trend:'↓',interp:'Improving',baseline:100.78,change:0.15,source:'Ministry of Commerce / NSO',status:'Ready',updated:true,thresholds:{g1:-3,g2:2.2,y1:2.2,y2:3.5,r1:3.5,r2:7},unit:'%',history:[{d:'Feb 25',v:101.15},{d:'Mar 25',v:101.47},{d:'Jan 26',v:101.62},{d:'Feb 26',v:100.78},{d:'Mar 26',v:100.93}],note:'Updated to March 2026. Improving trend.'},
+  {pillar:'Cost of Living',name:'CPI Rice',code:'CPI_RICE',date:'Mar 2026',raw:104.68,transform:'YoY',value:0.432,signal:'green',trend:'↓',interp:'Improving',baseline:104.24,change:0.44,source:'Ministry of Commerce / NSO',status:'Ready',updated:false,thresholds:{g1:0,g2:5.9,y1:5.9,y2:10.8,r1:10.8,r2:18},unit:'%',history:[{d:'Feb 25',v:103.67},{d:'Mar 25',v:104.23},{d:'Jan 26',v:103.88},{d:'Feb 26',v:104.24},{d:'Mar 26',v:104.68}],note:'Rice prices stable and well within Green range.'},
+  {pillar:'Cost of Living',name:'Transportation CPI',code:'CPI_TRANSPORT',date:'Mar 2026',raw:99.45,transform:'YoY',value:-0.020,signal:'green',trend:'↑',interp:'Emerging risk',baseline:97.06,change:2.39,source:'Ministry of Commerce / NSO',status:'Ready',updated:false,thresholds:{g1:-6,g2:4.6,y1:4.6,y2:8.7,r1:8.7,r2:14},unit:'%',history:[{d:'Feb 25',v:99.98},{d:'Mar 25',v:99.47},{d:'Jan 26',v:97.02},{d:'Feb 26',v:97.06},{d:'Mar 26',v:99.45}],note:'Trending sharply ↑ — bridge indicator between diesel shock and consumer prices.'},
+  {pillar:'Cost of Living',name:'Education CPI',code:'CPI_EDU',date:'Mar 2026',raw:102.70,transform:'YoY',value:0.914,signal:'green',trend:'→',interp:'No immediate concern',baseline:102.70,change:0.00,source:'Ministry of Commerce / NSO',status:'Ready',updated:false,thresholds:{g1:0,g2:1.8,y1:1.8,y2:2.8,r1:2.8,r2:6},unit:'%',history:[{d:'Feb 25',v:101.77},{d:'Jan 26',v:102.70},{d:'Feb 26',v:102.70},{d:'Mar 26',v:102.70}],note:null},
+  {pillar:'Cost of Living',name:'Utilities CPI',code:'CPI_UTIL',date:'Mar 2026',raw:96.09,transform:'YoY',value:-3.145,signal:'green',trend:'↑',interp:'Emerging risk',baseline:95.89,change:0.20,source:'Ministry of Commerce / NSO',status:'Ready',updated:false,thresholds:{g1:-7,g2:2.4,y1:2.4,y2:6.3,r1:6.3,r2:10},unit:'%',history:[{d:'Feb 25',v:100.58},{d:'Mar 25',v:99.21},{d:'Jan 26',v:95.89},{d:'Feb 26',v:95.89},{d:'Mar 26',v:96.09}],note:'Trend ↑ — indirect energy cost pass-through beginning.'},
+  {pillar:'Energy',name:'Diesel Price',code:'DIESEL',date:'Apr 17 2026',raw:42.90,transform:'Baseline %',value:43.48,signal:'red',trend:'↓',interp:'Critical but improving',baseline:29.90,change:13.00,source:'Bangchak Corporation',status:'Ready',updated:true,thresholds:{g1:0,g2:13.3,y1:13.3,y2:26.7,r1:26.7,r2:70},unit:'%',history:[{d:'Jan 9',v:29.94},{d:'Mar 24',v:32.94},{d:'Mar 31',v:40.74},{d:'Apr 9',v:48.40},{d:'Apr 17',v:42.90}],note:'Dropped from 48.40 → 42.90 THB this week (↓). Still 43.5% above Feb 2026 baseline. Stabilisation is positive but signal firmly Red.'},
+  {pillar:'Energy',name:'LPG Household Gas',code:'LPG',date:'Mar 2026',raw:423,transform:'Baseline %',value:0.0,signal:'green',trend:'→',interp:'No immediate concern',baseline:423.00,change:0.00,source:'EPPO',status:'Ready',updated:false,thresholds:{g1:0,g2:7.1,y1:7.1,y2:14.9,r1:14.9,r2:25},unit:'%',history:[{d:'Jan 26',v:423},{d:'Feb 26',v:423},{d:'Mar 26',v:423}],note:'Regulated price unchanged. Subsidy absorbing global LPG pressures.'},
+  {pillar:'Inflation',name:'CPI Headline',code:'CPI_HEADLINE',date:'Mar 2026',raw:100.27,transform:'YoY',value:-0.080,signal:'green',trend:'↑',interp:'Emerging risk',baseline:99.67,change:0.60,source:'Ministry of Commerce / NSO',status:'Ready',updated:false,thresholds:{g1:-2,g2:1.2,y1:1.2,y2:1.9,r1:1.9,r2:5},unit:'%',history:[{d:'Feb 25',v:100.55},{d:'Mar 25',v:100.35},{d:'Jan 26',v:99.91},{d:'Feb 26',v:99.67},{d:'Mar 26',v:100.27}],note:'Trending ↑ toward positive. Broad inflation not yet arrived — lagging indicator.'},
+  {pillar:'Inflation',name:'CPI Core',code:'CPI_CORE',date:'Mar 2026',raw:101.70,transform:'YoY',value:0.574,signal:'green',trend:'→',interp:'No immediate concern',baseline:101.82,change:-0.12,source:'Ministry of Commerce / NSO',status:'Ready',updated:false,thresholds:{g1:0,g2:0.9,y1:0.9,y2:1.2,r1:1.2,r2:3},unit:'%',history:[{d:'Feb 25',v:101.25},{d:'Mar 25',v:101.12},{d:'Jan 26',v:101.69},{d:'Feb 26',v:101.82},{d:'Mar 26',v:101.70}],note:'Underlying inflation stable. Oil shock not yet transmitting to core prices.'},
+  {pillar:'Household Stress',name:'Household Debt-to-GDP',code:'DEBT_HH_GDP',date:'Apr 2025',raw:86.30,transform:'Level',value:86.30,signal:'red',trend:'↓',interp:'Critical but improving',baseline:null,change:null,source:'Bank of Thailand',status:'Ready',updated:false,thresholds:{g1:60,g2:75,y1:75,y2:85,r1:85,r2:100},unit:'%',history:[{d:'Apr 24',v:89.40},{d:'Jan 25',v:86.70},{d:'Apr 25',v:86.30}],note:'Structural vulnerability at 86.3% GDP. Limits capacity to absorb shock. Data lags 1–2 quarters.'},
+  {pillar:'Household Stress',name:'Consumer Confidence',code:'CONFIDENCE',date:'Mar 2026',raw:51.80,transform:'Level',value:51.80,signal:'yellow',trend:'↓',interp:'Early warning',baseline:53.70,change:-1.90,source:'University of TCC / CEBF',status:'Ready',updated:false,thresholds:{g1:30,g2:60,y1:50,y2:60,r1:30,r2:50},unit:'',history:[{d:'Feb 25',v:57.80},{d:'Jan 26',v:52.80},{d:'Feb 26',v:53.70},{d:'Mar 26',v:51.80}],note:'At 51.8 and declining — approaching Red threshold of 50. Leading indicator of further consumption weakness.'},
+  {pillar:'Household Stress',name:'Private Consumption',code:'CONSUMP',date:'Feb 2026',raw:86.60,transform:'YoY',value:-2.915,signal:'red',trend:'→',interp:'Red',baseline:86.60,change:0.00,source:'Bank of Thailand',status:'Ready',updated:false,thresholds:{g1:-5,g2:3,y1:1,y2:3,r1:-10,r2:1},unit:'%',history:[{d:'Feb 25',v:89.20},{d:'Jan 26',v:99.00},{d:'Feb 26',v:86.60}],note:'Households actively cutting spending (-2.9% YoY). Confirms oil shock transmitting through behaviour.'},
+  {pillar:'Household Stress',name:'Public Debt to GDP',code:'DEBT_PUBLIC_GDP',date:'Feb 2026',raw:66.09,transform:'Level',value:66.09,signal:'yellow',trend:'↑',interp:'Early warning',baseline:66.09,change:0.00,source:'PDMO',status:'Ready',updated:false,thresholds:{g1:0,g2:60,y1:60,y2:70,r1:70,r2:90},unit:'%',history:[{d:'Feb 25',v:63.93},{d:'Jan 26',v:65.96},{d:'Feb 26',v:66.09}],note:'Rising trend narrows fiscal space. Oil Fund deficit adds further fiscal pressure.'},
+  {pillar:'Labour Market',name:'Unemployment Rate',code:'UNEMPLOYMENT',date:'Jan 2026',raw:0.89,transform:'Level',value:0.89,signal:'green',trend:'↑',interp:'Emerging risk',baseline:null,change:null,source:'Bank of Thailand',status:'Ready',updated:false,thresholds:{g1:0,g2:1,y1:1,y2:2,r1:2,r2:5},unit:'%',history:[{d:'Jan 25',v:0.94},{d:'Dec 25',v:0.73},{d:'Jan 26',v:0.89}],note:'Still low but ↑ from Dec 2025. Small increases are significant in Thailand context.'},
+  {pillar:'Additional Indicators',name:'Oil Fund Balance',code:'OIL_FUND',date:'Apr 12 2026',raw:-60167,transform:'Level',value:-60167,signal:'red',trend:'↓',interp:'Critical worsening',baseline:2459,change:-62626,source:'Oil Fuel Fund Office',status:'Ready',updated:true,thresholds:{g1:-70000,g2:0,y1:-5000,y2:0,r1:-70000,r2:-5000},unit:' mn THB',history:[{d:'Mar 26',v:2459},{d:'Apr 12',v:-60167}],note:'NEW this week. Deep deficit of −60.2 bn THB. Reflects sustained diesel and LPG subsidy costs. Limits further government mitigation capacity.'},
+  {pillar:'Labour Market',name:'Average Hours Worked',code:'HOURS_WORKED',date:null,raw:null,transform:'YoY',value:null,signal:'gray',trend:null,interp:null,baseline:null,change:null,source:null,status:'Missing data',updated:false,history:[],note:null},
+  {pillar:'Child Specific Impact',name:'Education Attendance',code:'ATTENDANCE',date:null,raw:null,transform:'YoY',value:null,signal:'gray',trend:null,interp:null,baseline:null,change:null,source:null,status:'Missing data',updated:false,history:[],note:null},
+  {pillar:'Child Specific Impact',name:'School Dropout',code:'DROPOUT',date:null,raw:null,transform:'YoY',value:null,signal:'gray',trend:null,interp:null,baseline:null,change:null,source:null,status:'Missing data',updated:false,history:[],note:null},
+  {pillar:'Additional Indicators',name:'Fertilizer Price',code:'FERTILIZER',date:null,raw:null,transform:'YoY',value:null,signal:'gray',trend:null,interp:null,baseline:null,change:null,source:null,status:'Missing data',updated:false,history:[],note:null},
+  {pillar:'Additional Indicators',name:'Agricultural Output',code:'AGRI_OUTPUT',date:null,raw:null,transform:'YoY',value:null,signal:'gray',trend:null,interp:null,baseline:null,change:null,source:null,status:'Missing data',updated:false,history:[],note:null},
+  {pillar:'Additional Indicators',name:'Exchange Rate THB/USD',code:'EXCHANGE',date:null,raw:null,transform:'YoY',value:null,signal:'gray',trend:null,interp:null,baseline:null,change:null,source:null,status:'Missing data',updated:false,history:[],note:null},
+];
+
+let currentFilter='all',currentPillar='all',currentTrend='all',currentSearch='',selectedCard=null,activeChart=null;
+
+function filterSignal(f,el){currentFilter=f;document.querySelectorAll('.sig-block').forEach(b=>b.classList.remove('active'));el.classList.add('active');renderCards()}
+function filterPillar(p,el){currentPillar=p;document.querySelectorAll('.pillar-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');document.getElementById('main-label').textContent=p==='all'?'All indicators':p;renderCards()}
+function setTrendFilter(t,el){currentTrend=t;document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderCards()}
+function searchCards(q){currentSearch=q.toLowerCase();renderCards()}
+
+function renderCards(){
+  const grid=document.getElementById('cards-grid');
+  let filtered=INDICATORS.filter(ind=>{
+    if(currentFilter!=='all'&&ind.signal!==currentFilter)return false;
+    if(currentPillar!=='all'&&ind.pillar!==currentPillar)return false;
+    if(currentTrend==='new'&&!ind.updated)return false;
+    if(currentTrend!=='all'&&currentTrend!=='new'&&ind.trend!==currentTrend)return false;
+    if(currentSearch&&!ind.name.toLowerCase().includes(currentSearch)&&!ind.pillar.toLowerCase().includes(currentSearch))return false;
+    return true;
+  });
+  if(!filtered.length){grid.innerHTML='<div style="text-align:center;padding:32px;color:var(--ink3);font-family:var(--mono);font-size:11px">No indicators match</div>';return}
+  grid.innerHTML=filtered.map(ind=>{
+    const sc=ind.signal;
+    if(ind.status==='Missing data')return`<div class="missing-card"><div class="card-stripe gray"></div><div><div class="card-name">${ind.name}</div><div class="card-meta">${ind.pillar} · Awaiting data</div></div><div style="margin-left:auto"><span class="card-signal gray">NO DATA</span></div></div>`;
+    const sigLabel={red:'RED',yellow:'YELLOW',green:'GREEN'}[sc]||'N/A';
+    const tc=ind.trend==='↑'?'trend-up':ind.trend==='↓'?'trend-down':'trend-stable';
+    const absV=Math.abs(ind.value||0);
+    const valStr=ind.value!==null?(absV>999?ind.value.toLocaleString():absV>10?ind.value.toFixed(1):ind.value.toFixed(3))+(ind.unit||'%'):'—';
+    return`<div class="card ${selectedCard===ind.code?'selected':''} ${ind.updated?'new-data':''}" onclick="showDetail('${ind.code}')">
+      <div class="card-stripe ${sc}"></div>
+      <div>
+        <div class="card-name">${ind.name}${ind.updated?'<span class="new-tag">updated</span>':''}</div>
+        <div class="card-meta">${ind.pillar} · ${ind.date||'—'} · ${ind.transform}: <strong>${valStr}</strong></div>
+      </div>
+      <div class="card-right">
+        <div><span class="card-signal ${sc}">${sigLabel}</span></div>
+        <div class="card-trend ${tc}">${ind.trend||'—'}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function showDetail(code){
+  selectedCard=code;renderCards();
+  const ind=INDICATORS.find(i=>i.code===code);
+  if(!ind)return;
+  const sc=ind.signal;
+  const tc=ind.trend==='↑'?'trend-up':ind.trend==='↓'?'trend-down':'trend-stable';
+  const missing=ind.status==='Missing data';
+  const sigEmoji={red:'🔴',yellow:'🟡',green:'🟢',gray:'⚪'}[sc];
+  const absV=Math.abs(ind.value||0);
+  const valStr=ind.value!==null?(absV>999?ind.value.toLocaleString():absV>10?ind.value.toFixed(2):ind.value.toFixed(3))+(ind.unit||'%'):'—';
+  if(activeChart){activeChart.destroy();activeChart=null}
+
+  let html=`<div class="detail-header">
+    <div class="detail-pillar">${ind.pillar}</div>
+    <div class="detail-name">${ind.name}${ind.updated?'<span class="new-tag" style="margin-left:6px">updated this week</span>':''}</div>
+    <div class="detail-signal-row">
+      <span class="big-signal ${sc}">${sigEmoji} ${sc.toUpperCase()}</span>
+      <span class="big-trend ${tc}">${ind.trend||'—'}</span>
+      <span class="detail-interp">${ind.interp||'No data'}</span>
+    </div>
+  </div><div class="detail-body">`;
+
+  if(missing){
+    html+=`<div style="text-align:center;padding:28px 0;color:var(--ink3)"><div style="font-size:24px;margin-bottom:10px;opacity:.3">⚪</div><div style="font-family:var(--mono);font-size:10px">Data not yet available</div></div>`;
+  } else {
+    if(ind.note)html+=`<div class="note-box"><strong>Context</strong>${ind.note}</div>`;
+    if(ind.updated){
+      const changeText=ind.code==='DIESEL'?'Diesel price dropped from 48.40 → 42.90 THB this week. Trend improves to ↓ but signal remains Red at 43.5% above baseline.':ind.code==='OIL_FUND'?'New data added this week. Fund moved from +2,459 mn THB (Mar) to −60,167 mn THB (Apr 12). New 🔴 Red signal added to dashboard.':'Updated to March 2026 data.';
+      html+=`<div class="week-change-box"><strong>Changed this week</strong>${changeText}</div>`;
+    }
+
+    html+=`<div class="stat-row">
+      <div class="stat-box"><div class="stat-label">${ind.transform} value</div><div class="stat-value ${sc}">${valStr}</div><div class="stat-sub">as of ${ind.date}</div></div>
+      <div class="stat-box"><div class="stat-label">Raw value</div><div class="stat-value">${ind.raw!==null?Number(ind.raw).toLocaleString():'—'}</div><div class="stat-sub">${ind.transform==='Level'?'current level':'index'}</div></div>`;
+    if(ind.baseline!==null){
+      const chg=ind.change;
+      const chgClass=chg===null?'':(sc==='red'?(chg>0?'red':'green'):(chg>0?'green':'red'));
+      html+=`<div class="stat-box"><div class="stat-label">Feb 2026 baseline</div><div class="stat-value">${Number(ind.baseline).toLocaleString()}</div><div class="stat-sub">reference point</div></div>
+      <div class="stat-box"><div class="stat-label">Change vs baseline</div><div class="stat-value ${chgClass}">${chg!==null?(chg>0?'+':'')+Number(chg).toLocaleString():'—'}</div><div class="stat-sub">since Feb 2026</div></div>`;
+    }
+    html+=`</div>`;
+
+    // Threshold bar (skip OIL_FUND — qualitative)
+    const t=ind.thresholds;
+    if(ind.code!=='OIL_FUND'&&typeof t.g1==='number'){
+      const range=(t.r2-t.g1)||1;
+      const gPct=Math.max(0,Math.min(100,((t.g2-t.g1)/range)*100));
+      const yPct=Math.max(0,Math.min(100,((t.y2-t.y1)/range)*100));
+      const rPct=Math.max(0,Math.min(100,((t.r2-t.r1)/range)*100));
+      const mPct=Math.max(2,Math.min(98,((ind.value-t.g1)/range)*100));
+      html+=`<div class="threshold-section"><div class="section-title">Threshold position</div>
+        <div class="thresh-bar-wrap">
+          <div class="thresh-bar">
+            <div class="thresh-seg green" style="width:${gPct}%"></div>
+            <div class="thresh-seg yellow" style="width:${yPct}%"></div>
+            <div class="thresh-seg red" style="width:${rPct}%"></div>
+            <div class="thresh-marker" style="left:${mPct}%"></div>
+          </div>
+          <div class="thresh-labels"><span>🟢 &lt;${t.g2}${ind.unit||'%'}</span><span>🟡 ${t.y1}–${t.y2}${ind.unit||'%'}</span><span>🔴 ≥${t.r1}${ind.unit||'%'}</span></div>
+        </div>
+      </div>`;
+    }
+
+    if(ind.history.length>1)html+=`<div class="chart-section"><div class="section-title">Historical values</div><div class="chart-wrap"><canvas id="spark-chart" height="110"></canvas></div></div>`;
+
+    html+=`<div class="source-row"><div class="section-title">Source</div>
+      <strong>Source:</strong> ${ind.source||'—'}<br>
+      <strong>Transform:</strong> ${ind.transform}<br>
+      <strong>Direction:</strong> ${['CONFIDENCE','CONSUMP','AGRI_OUTPUT','OIL_FUND','HOURS_WORKED'].includes(ind.code)?'Lower = Worse':'Higher = Worse'}
+    </div>`;
+  }
+  html+='</div>';
+  document.getElementById('detail-panel').innerHTML=html;
+
+  if(ind.history.length>1){
+    requestAnimationFrame(()=>{
+      const ctx=document.getElementById('spark-chart');
+      if(!ctx)return;
+      const colors={red:'#E8392A',yellow:'#D97706',green:'#1A7A4A',gray:'#9CA3AF'};
+      const color=colors[sc];
+      activeChart=new Chart(ctx,{type:'line',data:{labels:ind.history.map(h=>h.d),datasets:[{data:ind.history.map(h=>h.v),borderColor:color,backgroundColor:color+'18',borderWidth:2,pointRadius:3.5,pointBackgroundColor:color,fill:true,tension:.3}]},
+        options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.parsed.y}}},scales:{x:{grid:{display:false},ticks:{font:{family:'DM Mono',size:8},color:'#9CA3AF'}},y:{grid:{color:'#F3F4F6'},ticks:{font:{family:'DM Mono',size:8},color:'#9CA3AF'}}}}});
+    });
+  }
+}
+
+renderCards();
+setTimeout(()=>showDetail('DIESEL'),100);
+</script>
+</body>
+</html>
